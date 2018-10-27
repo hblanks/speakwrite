@@ -1,0 +1,5 @@
+github.com/gomarkdown/markdown v0.0.0-20200105192015-0948ad373b2c h1:YQi5cVUn3bbQSS7fadb1G9LLp+sqYk5bQEw+VYes7MQ=
+github.com/gomarkdown/markdown v0.0.0-20200105192015-0948ad373b2c/go.mod h1:aii0r/K0ZnHv7G0KF7xy1v0A7s2Ljrb5byB7MO5p6TU=
+github.com/julienschmidt/httprouter v1.3.0 h1:U0609e9tgbseu3rBINet9P48AI/D3oJs4dN7jwJOQ1U=
+github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
+golang.org/dl v0.0.0-20190829154251-82a15e2f2ead/go.mod h1:IUMfjQLJQd4UTqG1Z90tenwKoCX93Gn3MAQJMOSBsDQ=

@@ -1,0 +1,20 @@
+version: '3.4'
+
+services:
+  web:
+    image: debian:buster-slim
+    user: www-data
+    environment:
+      THEME_DIR: /pwd/theme
+      CONTENT_DIR: /pwd/content
+      LISTEN_ADDR: 0.0.0.0:8080
+    ports:
+      - 127.0.0.1:8080:8080
+    volumes:
+      - ./build/intervald:/intervald
+      - ./theme:/pwd/theme
+      - ./content:/pwd/content
+    command:
+      - /intervald
+
+

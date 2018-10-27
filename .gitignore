@@ -1,0 +1,3 @@
+build/**
+pelican.pid
+srv.pid
