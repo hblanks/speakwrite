@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"time"
 
 	"github.com/gomarkdown/markdown"
@@ -51,18 +52,22 @@ type Page struct {
 	contentPath string
 }
 
+type PageIndex map[string]*Page
+
 type Post struct {
 	Date        time.Time
 	Title       string
 	Name        string
 	contentPath string
+	index       int
 }
 
 const IsoDateFormat = "2006-01-02"
 
 func parse(path string) (ast.Node, error) {
 	mdparser := parser.NewWithExtensions(
-		parser.CommonExtensions | parser.AutoHeadingIDs | parser.Titleblock,
+		parser.CommonExtensions | parser.Footnotes |
+			parser.MathJax | parser.AutoHeadingIDs | parser.Titleblock,
 	)
 
 	log.Printf("content.parse: %s", path)
@@ -130,7 +135,6 @@ func (p *Post) HTML() (template.HTML, error) {
 	if doc == nil {
 		panic("wat")
 	}
-	ast.Print(os.Stderr, doc)
 	output := markdown.Render(doc, mdrenderer)
 	if len(output) == 0 {
 		return template.HTML(""), errors.New("Failed to render document")
@@ -138,10 +142,23 @@ func (p *Post) HTML() (template.HTML, error) {
 	return template.HTML(output), nil
 }
 
-type PageIndex map[string]*Page
-type PostIndex map[string]*Post
+type PostIndex struct {
+	names map[string]*Post
+	Posts []*Post
+}
 
-func ReadPosts(contentDir string) (PostIndex, error) {
+func (p *PostIndex) Get(name string) *Post {
+	return p.names[name]
+}
+
+func (p *PostIndex) GetLatest() *Post {
+	if len(p.Posts) == 0 {
+		return nil
+	}
+	return p.Posts[len(p.Posts)-1]
+}
+
+func readPosts(contentDir string) ([]*Post, error) {
 	d, err := os.Open(filepath.Join(contentDir, "posts"))
 	if err != nil {
 		return nil, err
@@ -153,7 +170,8 @@ func ReadPosts(contentDir string) (PostIndex, error) {
 		// NB: IO errors are ignored by Glob!
 		return nil, err
 	}
-	result := make(PostIndex)
+
+	posts := make([]*Post, 0)
 	for _, info := range infos {
 		if !info.IsDir() {
 			continue
@@ -171,8 +189,29 @@ func ReadPosts(contentDir string) (PostIndex, error) {
 			if err != nil {
 				return nil, err
 			}
-			result[post.Name] = post
+			posts = append(posts, post)
 		}
+	}
+	return posts, nil
+}
+
+// Loads posts from a directory into a PostIndex.
+func LoadPosts(contentDir string) (*PostIndex, error) {
+	posts, err := readPosts(contentDir)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(posts, func(i, j int) bool {
+		return posts[i].Name < posts[j].Name
+	})
+
+	result := &PostIndex{
+		names: make(map[string]*Post),
+		Posts: posts,
+	}
+	for i, post := range posts {
+		post.index = i
+		result.names[post.Name] = post
 	}
 	return result, nil
 }

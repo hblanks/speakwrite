@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -14,24 +16,31 @@ import (
 )
 
 type Server struct {
+	PublicURL *url.URL
+
 	router     *httprouter.Router
 	contentDir string
 
-	posts     content.PostIndex
+	Posts     *content.PostIndex
 	templates map[string]*template.Template
 }
 
-func NewServer(contentDir, themeDir string) (*Server, error) {
+func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
 	s := &Server{
 		router:     httprouter.New(),
 		contentDir: contentDir,
-		posts:      make(content.PostIndex),
 		templates:  make(map[string]*template.Template),
 	}
+
+	u, err := url.Parse(publicURL)
+	if err != nil {
+		return nil, err
+	}
+	s.PublicURL = u
+
 	if err := s.loadTemplates(filepath.Join(themeDir, "templates")); err != nil {
 		return nil, err
 	}
-
 	if err := s.loadContent(contentDir); err != nil {
 		return nil, err
 	}
@@ -45,12 +54,12 @@ func NewServer(contentDir, themeDir string) (*Server, error) {
 }
 
 func (s *Server) loadContent(contentDir string) error {
-	postIndex, err := content.ReadPosts(s.contentDir)
+	postIndex, err := content.LoadPosts(s.contentDir)
 	if err != nil {
 		return err
 	}
-	log.Printf("Server.loadContent: posts=%d", len(postIndex))
-	s.posts = postIndex
+	log.Printf("Server.loadContent: posts=%d", len(postIndex.Posts))
+	s.Posts = postIndex
 	return nil
 }
 
@@ -62,11 +71,19 @@ func (s *Server) loadTemplates(templatesDir string) error {
 	}
 	basePath := filepath.Join(templatesDir, "base.html")
 	for _, p := range paths {
-		var t *template.Template
+		t := template.New("base.html")
+		t.Funcs(map[string]interface{}{
+			"isoDate": func(t *time.Time) string {
+				return t.Format("2006-01-02")
+			},
+			"englishDate": func(t *time.Time) string {
+				return t.Format("January 2nd, 2006")
+			},
+		})
 		if p == basePath {
-			t, err = template.ParseFiles(p)
+			_, err = t.ParseFiles(p)
 		} else {
-			t, err = template.ParseFiles(p, basePath)
+			_, err = t.ParseFiles(basePath, p)
 		}
 		if err != nil {
 			return err
@@ -80,7 +97,7 @@ func sendError(w http.ResponseWriter, code int) {
 	http.Error(w, http.StatusText(code), code)
 }
 
-func (s *Server) getTemplate(w http.ResponseWriter, name string) *template.Template {
+func (s *Server) GetTemplate(w http.ResponseWriter, name string) *template.Template {
 	t := s.templates[name]
 	if t == nil {
 		log.Printf("getTemplate: %s not found!", name)
