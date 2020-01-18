@@ -25,8 +25,8 @@ all: $(GO_OUTPUTS)
 # docker-compose
 #
 
-.PHONY: cluster-up
-cluster-up: all
+.PHONY: up
+up: all
 	@docker-compose down
 	@docker-compose up -d
 	@sleep 0.5
@@ -47,4 +47,9 @@ watch:
 	gomon -d -R -m='\.(go|html)$$' $(WATCH_DIRS) \
 			-- sh -c "make && docker-compose restart web"
 
-
+.PHONY: deploy
+deploy: all
+	rm -rf $(BUILD)/html
+	dev/intervald.sh
+	rsync -av --delete \
+		build/html/ fex:/state/home/web/confidentialinterval.com/html/

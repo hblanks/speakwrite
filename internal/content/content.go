@@ -40,27 +40,9 @@ func nodeHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) 
 
 var mdrenderer = html.NewRenderer(html.RendererOptions{
 	Title:          "A custom title",
-	Flags:          html.CommonFlags | html.FootnoteReturnLinks,
+	Flags:          html.CommonFlags, // | html.FootnoteReturnLinks,
 	RenderNodeHook: html.RenderNodeFunc(nodeHook),
 })
-
-var postRegexp = regexp.MustCompile(`(\d{4}-\d{2}-\d{2})-(.*)`)
-
-type Page struct {
-	Title       string
-	Name        string
-	contentPath string
-}
-
-type PageIndex map[string]*Page
-
-type Post struct {
-	Date        time.Time
-	Title       string
-	Name        string
-	contentPath string
-	index       int
-}
 
 const IsoDateFormat = "2006-01-02"
 
@@ -104,13 +86,64 @@ func getTitle(doc ast.Node) string {
 	return title
 }
 
-func NewPost(dateStr, name, contentPath string) (*Post, error) {
+//
+// Page
+//
+//
+// type Page struct {
+// 	Title       string
+// 	Name        string
+// 	contentPath string
+// }
+//
+//
+// PageIndex
+//
+//
+// type PageIndex map[string]*Page
+//
+// func (p PageIndex) Routes() ([]string, error) {
+// 	return []string{}, nil
+// }
+//
+// func LoadPages(contentDir string) (PageIndex, error) {
+// 	root := filepath.Join(contentDir, "pages")
+// 	paths := make([]string, 0)
+// 	filepath.Walk(root,
+// 		func(path string, info os.FileInfo, err error) error {
+// 			if err != nil || info.IsDir() {
+// 				return nil
+// 			}
+// 			if strings.HasSuffix(path, ".md") {
+// 				paths = append(paths, path)
+// 			}
+// 			return nil
+// 		})
+//
+// 	log.Printf("LoadPages: paths=%v", paths)
+//
+// 	return nil, nil
+// }
+
+//
+// Post
+//
+
+type Post struct {
+	Date        time.Time
+	Title       string
+	Name        string
+	ContentPath string
+	index       int
+}
+
+func NewPost(dateStr, name, ContentPath string) (*Post, error) {
 	t, err := time.Parse(IsoDateFormat, dateStr)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := parse(contentPath)
+	doc, err := parse(ContentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +155,13 @@ func NewPost(dateStr, name, contentPath string) (*Post, error) {
 	return &Post{
 		Date:        t,
 		Name:        name,
-		contentPath: contentPath,
+		ContentPath: ContentPath,
 		Title:       title,
 	}, nil
 }
 
 func (p *Post) HTML() (template.HTML, error) {
-	doc, err := parse(p.contentPath)
+	doc, err := parse(p.ContentPath)
 	if err != nil {
 		return template.HTML(""), err
 	}
@@ -141,6 +174,10 @@ func (p *Post) HTML() (template.HTML, error) {
 	}
 	return template.HTML(output), nil
 }
+
+//
+// PostIndex
+//
 
 type PostIndex struct {
 	names map[string]*Post
@@ -157,6 +194,8 @@ func (p *PostIndex) GetLatest() *Post {
 	}
 	return p.Posts[len(p.Posts)-1]
 }
+
+var postRegexp = regexp.MustCompile(`(\d{4}-\d{2}-\d{2})-(.*)`)
 
 func readPosts(contentDir string) ([]*Post, error) {
 	d, err := os.Open(filepath.Join(contentDir, "posts"))
@@ -214,8 +253,4 @@ func LoadPosts(contentDir string) (*PostIndex, error) {
 		result.names[post.Name] = post
 	}
 	return result, nil
-}
-
-func ReadPages(contentDir string) (PageIndex, error) {
-	return nil, nil
 }

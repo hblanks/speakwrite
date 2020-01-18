@@ -7,7 +7,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -18,11 +21,15 @@ import (
 type Server struct {
 	PublicURL *url.URL
 
-	router     *httprouter.Router
-	contentDir string
+	router *httprouter.Router
 
-	Posts     *content.PostIndex
+	contentDir string
+	Posts      *content.PostIndex
+	// Pages      content.PageIndex
+
 	templates map[string]*template.Template
+
+	staticDir string
 }
 
 func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
@@ -45,11 +52,11 @@ func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
 		return nil, err
 	}
 
-	staticDir := filepath.Join(themeDir, "static")
-	if _, err := ioutil.ReadDir(staticDir); err != nil {
+	s.staticDir = filepath.Join(themeDir, "static")
+	if _, err := ioutil.ReadDir(s.staticDir); err != nil {
 		return nil, err
 	}
-	s.addHandlers(staticDir)
+	s.addHandlers()
 	return s, nil
 }
 
@@ -58,8 +65,15 @@ func (s *Server) loadContent(contentDir string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Server.loadContent: posts=%d", len(postIndex.Posts))
 	s.Posts = postIndex
+
+	// pageIndex, err := content.LoadPages(s.contentDir)
+	// if err != nil {
+	// 	return err
+	// }
+	// s.Pages = pageIndex
+
+	log.Printf("Server.loadContent: posts=%d", len(postIndex.Posts))
 	return nil
 }
 
@@ -104,6 +118,93 @@ func (s *Server) GetTemplate(w http.ResponseWriter, name string) *template.Templ
 		sendError(w, http.StatusInternalServerError)
 	}
 	return t
+}
+
+func joinURL(base *url.URL, relpath string) string {
+	var u url.URL = *base
+	u.Path = path.Join(u.Path, relpath)
+	return u.String()
+}
+
+func (s *Server) staticURL(fpath string) string {
+	rel, err := filepath.Rel(s.staticDir, fpath)
+	if err != nil {
+		panic(err)
+	}
+	return joinURL(s.PublicURL, path.Join("/static", rel))
+}
+
+func postRelativeURL(post *content.Post) string {
+	return path.Join("/posts", post.Name) + "/"
+}
+
+func (s *Server) postURL(post *content.Post) string {
+	return joinURL(s.PublicURL, postRelativeURL(post)) + "/"
+}
+
+func (s *Server) addHandlers() {
+	s.router.GET("/", s.getRoot)
+	s.router.GET("/posts/:name/*filepath", s.getPost)
+	s.router.ServeFiles("/static/*filepath", http.Dir(s.staticDir))
+}
+
+func (s *Server) GetURLs() ([]string, error) {
+	urls := make([]string, 0)
+	if u := s.PublicURL.String(); strings.HasSuffix(u, "/") {
+		urls = append(urls, u)
+	} else {
+		urls = append(urls, u+"/")
+	}
+
+	// Find all posts and related files
+	for _, post := range s.Posts.Posts {
+		u := s.postURL(post)
+		urls = append(urls, u)
+		postDir := filepath.Dir(post.ContentPath)
+		err := filepath.Walk(postDir,
+			func(path string, info os.FileInfo, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case info.IsDir() && filepath.Base(path) == "exclude":
+					return filepath.SkipDir
+				case info.IsDir():
+					return nil
+				case path == post.ContentPath:
+					return nil
+				}
+				rel, err := filepath.Rel(postDir, path)
+
+				parsedURL, err := url.Parse(u)
+				if err != nil {
+					return err
+				}
+				urls = append(urls, joinURL(parsedURL, rel))
+				return nil
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Find all static assets
+	err := filepath.Walk(s.staticDir,
+		func(path string, info os.FileInfo, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case info.IsDir():
+				return nil
+			}
+			urls = append(urls, s.staticURL(path))
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	// Find all static assets
+	return urls, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

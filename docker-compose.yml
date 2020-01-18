@@ -16,5 +16,4 @@ services:
       - ./content:/pwd/content
     command:
       - /intervald
-
-
+      - serve

@@ -4,22 +4,15 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
-	"path"
+	"path/filepath"
 
 	"github.com/hblanks/confint/internal/content"
 	"github.com/julienschmidt/httprouter"
 )
 
-func (s *Server) postURL(post *content.Post) string {
-	var u url.URL = *s.PublicURL
-	u.Path = path.Join("/posts", post.Name)
-	return u.String()
-}
-
-func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	name := ps.ByName("name")
-	log.Printf("getRoot: name=%q", name)
+func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// name := ps.ByName("name")
+	// log.Printf("getRoot: name=%q", name)
 
 	data := struct {
 		Title       string
@@ -28,7 +21,7 @@ func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}{Title: "The static redirect"}
 
 	if post := s.Posts.GetLatest(); post != nil {
-		data.LatestURL = s.postURL(post)
+		data.LatestURL = postRelativeURL(post)
 		data.LatestTitle = post.Title
 	}
 
@@ -41,6 +34,7 @@ func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 }
 
+// Serve post and associated files.
 func (s *Server) getPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	name := ps.ByName("name")
 	post := s.Posts.Get(name)
@@ -48,6 +42,16 @@ func (s *Server) getPost(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		http.NotFound(w, r)
 		return
 	}
+
+	if fpath := ps.ByName("filepath"); fpath != "/" {
+		log.Printf("getPost: name=%q post=%v filepath=%s", name, post, fpath)
+		fs := ContentDir(filepath.Dir(post.ContentPath))
+		fileServer := http.FileServer(fs)
+		r.URL.Path = fpath
+		fileServer.ServeHTTP(w, r)
+		return
+	}
+
 	log.Printf("getPost: name=%q post=%v", name, post)
 
 	t := s.GetTemplate(w, "post.html")
@@ -70,11 +74,4 @@ func (s *Server) getPost(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	if err := t.Execute(w, &data); err != nil {
 		log.Printf("getPost: name=%q error %v", err)
 	}
-}
-
-func (s *Server) addHandlers(staticDir string) {
-	s.router.GET("/", s.getRoot)
-	// s.router.GET("/about", s.getRoot)
-	s.router.GET("/posts/:name", s.getPost)
-	s.router.ServeFiles("/static/*filepath", http.Dir(staticDir))
 }
