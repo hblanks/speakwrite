@@ -13,7 +13,13 @@ make
 The devserver runs on http://localhost:8080/ with:
 
 ```
-make cluster-up watch
+make up watch
+```
+
+## Deployment
+
+```
+make deploy
 ```
 
 ## How it works
