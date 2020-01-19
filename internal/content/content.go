@@ -52,7 +52,7 @@ func parse(path string) (ast.Node, error) {
 			parser.MathJax | parser.AutoHeadingIDs | parser.Titleblock,
 	)
 
-	log.Printf("content.parse: %s", path)
+	// log.Printf("content.parse: %s", path)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
