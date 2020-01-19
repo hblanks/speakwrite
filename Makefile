@@ -51,5 +51,6 @@ watch:
 deploy: all
 	rm -rf $(BUILD)/html
 	dev/intervald.sh
-	rsync -av --delete \
+	rsync -av --delete --checksum \
+		--exclude="*.swp" --delete-excluded \
 		build/html/ fex:/state/home/web/confidentialinterval.com/html/
