@@ -47,10 +47,13 @@ watch:
 	gomon -d -R -m='\.(go|html)$$' $(WATCH_DIRS) \
 			-- sh -c "make && docker-compose restart web"
 
-.PHONY: deploy
-deploy: all
+.PHONY: html
+html: all
 	rm -rf $(BUILD)/html
 	dev/intervald.sh
+
+.PHONY: deploy
+deploy: html
 	rsync -av --delete --checksum \
 		--exclude="*.swp" --delete-excluded \
 		build/html/ fex:/state/home/web/confidentialinterval.com/html/
