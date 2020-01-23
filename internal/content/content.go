@@ -3,6 +3,7 @@ package content
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -137,25 +138,25 @@ type Post struct {
 	index       int
 }
 
-func NewPost(dateStr, name, ContentPath string) (*Post, error) {
+func NewPost(dateStr, name, contentPath string) (*Post, error) {
 	t, err := time.Parse(IsoDateFormat, dateStr)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := parse(ContentPath)
+	doc, err := parse(contentPath)
 	if err != nil {
 		return nil, err
 	}
 	title := getTitle(doc)
 	if title == "" {
-		return nil, errors.New("No title found")
+		return nil, fmt.Errorf("No title found for %s", contentPath)
 	}
 
 	return &Post{
 		Date:        t,
 		Name:        name,
-		ContentPath: ContentPath,
+		ContentPath: contentPath,
 		Title:       title,
 	}, nil
 }
@@ -241,7 +242,10 @@ func LoadPosts(contentDir string) (*PostIndex, error) {
 		return nil, err
 	}
 	sort.Slice(posts, func(i, j int) bool {
-		return posts[i].Name < posts[j].Name
+		if posts[i].Date == posts[j].Date {
+			return posts[i].Name < posts[j].Name
+		}
+		return posts[i].Date.Before(posts[j].Date)
 	})
 
 	result := &PostIndex{
