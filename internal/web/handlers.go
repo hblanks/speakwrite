@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/hblanks/confint/internal/content"
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/hblanks/confint/internal/content"
 )
 
 func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
