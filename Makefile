@@ -11,7 +11,7 @@ GO_SOURCES := \
 	$(shell find . -path ./$(BUILD) -prune -o -name \*.go -print)
 
 GO_OUTPUTS := \
-	$(BUILD)/intervald
+	$(BUILD)/blog-httpd
 
 $(GO_OUTPUTS): $(GO_SOURCES)
 	@mkdir -p $(BUILD)
@@ -50,7 +50,7 @@ watch:
 .PHONY: html
 html: all
 	rm -rf $(BUILD)/html
-	dev/intervald.sh
+	dev/blog-httpd.sh
 
 .PHONY: deploy
 deploy: html

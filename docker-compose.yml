@@ -11,9 +11,9 @@ services:
     ports:
       - 127.0.0.1:8080:8080
     volumes:
-      - ./build/intervald:/intervald
+      - ./build/blog-httpd:/blog-httpd
       - ./theme:/pwd/theme
       - ./content:/pwd/content
     command:
-      - /intervald
+      - /blog-httpd
       - serve

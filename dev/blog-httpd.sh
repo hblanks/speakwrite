@@ -6,4 +6,4 @@ make -q || make
 THEME_DIR=$DIR/theme \
     CONTENT_DIR=$DIR/content \
     LISTEN_ADDR=${LISTEN_ADDR:-localhost:8080} \
-    exec $DIR/build/intervald "$@"
+    exec $DIR/build/blog-httpd "$@"
