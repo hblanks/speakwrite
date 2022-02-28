@@ -1,4 +1,4 @@
-package confint
+package speakwrite
 
 import (
 	"flag"
@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hblanks/confint/internal/web"
+	"github.com/hblanks/speakwrite/internal/web"
 )
 
 type ResponseWriter struct {

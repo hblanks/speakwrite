@@ -22,16 +22,18 @@ all: $(GO_OUTPUTS)
 
 
 #
-# docker-compose
+# docker
 #
 
-.PHONY: up
-up: all
-	@docker-compose down
-	@docker-compose up -d
-	@sleep 0.5
-	@docker-compose exec web true
 
+.PHONY: docker
+docker: all
+	docker build -t speakwrite:latest .
+
+
+#
+# watch
+#
 
 # Because gomon doesn't like watching the whole repo..
 WATCH_DIRS = $(shell \
@@ -44,8 +46,14 @@ WATCH_DIRS = $(shell \
 
 .PHONY: watch
 watch:
-	gomon -d -R -m='\.(go|html)$$' $(WATCH_DIRS) \
-			-- sh -c "make && docker-compose restart web"
+ifeq ($(THEME_DIR),)
+	$(error THEME_DIR must be set for watch target)
+endif
+ifeq ($(CONTAINER),)
+	$(error CONTAINER must be set for watch target)
+endif
+	gomon -d -R -m='\.(go|html)$$' $(WATCH_DIRS) $(THEME_DIR) \
+			-- sh -c "make && docker restart $(CONTAINER)"
 
 .PHONY: html
 html: all

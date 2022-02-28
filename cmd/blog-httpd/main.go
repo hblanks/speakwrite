@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/hblanks/confint"
+	"github.com/hblanks/speakwrite"
 )
 
 func main() {
-	confint.Main()
+	speakwrite.Main()
 }

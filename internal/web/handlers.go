@@ -8,7 +8,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/hblanks/confint/internal/content"
+	"github.com/hblanks/speakwrite/internal/content"
 )
 
 func (s *Server) getRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

@@ -1,4 +1,4 @@
-module github.com/hblanks/confint
+module github.com/hblanks/speakwrite
 
 go 1.13
 

@@ -15,7 +15,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/hblanks/confint/internal/content"
+	"github.com/hblanks/speakwrite/internal/content"
 )
 
 type Server struct {
