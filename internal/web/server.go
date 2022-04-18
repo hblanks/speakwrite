@@ -32,6 +32,10 @@ type Server struct {
 	staticDir string
 }
 
+// Creates (but does not run!) a server. Steps include:
+//	- load all templates
+//	- load all content
+//  - set up all routes
 func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
 	s := &Server{
 		router:     httprouter.New(),
@@ -46,10 +50,10 @@ func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
 	s.PublicURL = u
 
 	if err := s.loadTemplates(filepath.Join(themeDir, "templates")); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loadTemplates error: %w", err)
 	}
 	if err := s.loadContent(contentDir); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loadContent error: %w", err)
 	}
 
 	s.staticDir = filepath.Join(themeDir, "static")
@@ -61,7 +65,7 @@ func NewServer(publicURL, contentDir, themeDir string) (*Server, error) {
 }
 
 func (s *Server) loadContent(contentDir string) error {
-	postIndex, err := content.LoadPosts(s.contentDir)
+	postIndex, err := content.NewPostIndex(s.contentDir)
 	if err != nil {
 		return err
 	}
@@ -134,17 +138,13 @@ func (s *Server) staticURL(fpath string) string {
 	return joinURL(s.PublicURL, path.Join("/static", rel))
 }
 
-func postRelativeURL(post *content.Post) string {
-	return path.Join("/posts", post.Name) + "/"
-}
-
 func (s *Server) postURL(post *content.Post) string {
-	return joinURL(s.PublicURL, postRelativeURL(post)) + "/"
+	return joinURL(s.PublicURL, post.RelativeURL()) + "/"
 }
 
 func (s *Server) addHandlers() {
 	s.router.GET("/", s.getRoot)
-	s.router.GET("/posts/:name/*filepath", s.getPost)
+	s.router.GET("/posts/*filepath", s.getPost)
 	s.router.ServeFiles("/static/*filepath", http.Dir(s.staticDir))
 }
 
@@ -171,6 +171,8 @@ func (s *Server) GetURLs() ([]string, error) {
 				case info.IsDir():
 					return nil
 				case path == post.ContentPath:
+					return nil
+				case path == filepath.Join(postDir, "metadata.json"):
 					return nil
 				}
 				rel, err := filepath.Rel(postDir, path)

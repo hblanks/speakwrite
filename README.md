@@ -1,49 +1,67 @@
-# confidential interval
+# speakwrite
+
+A minimal static blog renderer and dev server.
 
 ## Setup
 
-To build the server (TODO and validate markdown?), run:
+To build the server, run:
 
 ```
 make
 ```
 
+## How it works: overview
+
+speakwrite expects two directories: a `CONTENT_DIR` and a `THEME_DIR`.
+
+`CONTENT_DIR` contains pages and posts:
+
+```
+content/
+  <!-- TODO pages/
+    {PAGE_NAME}.md              Pages. Mapped to /{PAGE_NAME}/ -->
+  posts/
+    {ISO_8601}-{POST_NAME}/     Articles. Mapped to /posts/{SERIES_NAME}/{POST_NAME}/
+      index.md                  Article text.
+    {SERIES_NAME}/
+      {ISO_8601}-{POST_NAME}/   Articles in a series. Mapped to /posts/{SERIES_NAME}/{POST_NAME}/
+        index.md                Article text.
+```
+
+`THEME_DIR` contains static assets and templates:
+
+```
+theme/
+  static/                       Static assets. Mapped to /static
+    v/                          Versioned static assets. Cached forever.
+  template/                         
+    base.html                   Base HTML template.
+    root.html                   Template for /
+    <!-- TODO page.html                   Template for pages not under posts/ -->
+    post.html                   Template for articles under posts/
+```
+
+## What to put in a post
+
+## What to put in a template
+
+Template variables
+
+Base (all pages):
+
+Root:
+
+Post:
+
+
+
+
+
 ## Development
 
-The devserver runs on http://localhost:8080/ with:
+To run the server locally with auto-reloading for content
+and code changes:
 
 ```
-make up watch
-```
-
-## Deployment
-
-```
-make deploy
-```
-
-## How it works
-
-Directory layout:
-
-```
-cmd/                              Server & renderer entrypoint.
-content/
-    root/                         Static pages, mapped to /
-    posts/
-        ${ISO_8601}-{PATH_NAME}/  Article. Mapped to /posts/
-            index.md              Article text.
-dev/                              Development scripts
-theme/
-    static/                       Static assets. Mapped to /static
-      v/                          Versioned static assets. Cached forever.
-    template/                     HTML templates.
-    vendor/                       Vendored dependencies (CSS, JS)
-internal/                         All go code.
-```
-
-Server commandline:
-
-```
-CONTENT_DIR=content THEME=theme interval
+CONTENT_DIR=/path/to/content THEME_DIR=/path/to/theme ./dev/watch.sh
 ```

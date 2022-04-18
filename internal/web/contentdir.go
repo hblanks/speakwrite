@@ -7,8 +7,11 @@ import (
 	"path/filepath"
 )
 
+// Type for serving static files within an individual post's directory.
 type ContentDir string
 
+// Returns files to serve over HTTP, but only if those files aren't the raw
+// markdown and aren't in a directory called "exclude."
 func (c ContentDir) Open(name string) (http.File, error) {
 	dir := string(c)
 
