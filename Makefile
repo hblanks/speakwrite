@@ -28,6 +28,7 @@ $(GO_OUTPUTS): $(GO_SOURCES)
 	@mkdir -p $(BUILD)
 	go build -o $(BUILD)/ ./cmd/...
 
+.PHONY: test
 test:
 	go test ./...
 
@@ -36,4 +37,4 @@ test:
 #
 
 .PHONY: all
-all: $(GO_OUTPUTS) $(GOMON)
+all: $(GO_OUTPUTS) $(GOMON) test

@@ -33,7 +33,7 @@ type Post struct {
 	ContentPath string
 	Metadata    PostMetadata
 	Name        string
-	Series *Series
+	Series      *Series
 	Title       string
 }
 
@@ -110,32 +110,42 @@ func sortPosts(posts []*Post) {
 }
 
 //
-// Series
+// A Series describes a topic-specific, often time-limited collection of
+// posts.
 //
+
+type SeriesAuthor struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
 
 type SeriesMetadata struct {
 	Title string `json:"title"`
+	// Fields required for RSS but otherwise optional.
+	// Usually these will only be set for the base (unnamed) series.
+	URL         string       `json:"url"`
+	Description string       `json:"description"`
+	Author      SeriesAuthor `json:"author"`
+	Created     time.Time    `json:"created,string"`
 }
 
 type Series struct {
+	SeriesMetadata
 	Name  string
-	Title string
 	Posts []*Post
 }
 
 func NewSeries(name, metadataPath string) (*Series, error) {
 	s := &Series{Name: name}
 	if metadataPath != "" {
-		sm := &SeriesMetadata{}
 		b, err := ioutil.ReadFile(metadataPath)
 		if err != nil {
 			return nil, fmt.Errorf("NewSeries error: %w", err)
 		}
-		err = json.Unmarshal(b, sm)
+		err = json.Unmarshal(b, &s.SeriesMetadata)
 		if err != nil {
 			return nil, fmt.Errorf("NewSeries error: %w", err)
 		}
-		s.Title = sm.Title
 	}
 	return s, nil
 }
@@ -148,7 +158,7 @@ func sortSeries(s []*Series) {
 }
 
 //
-// PostIndex
+// The PostIndex holds all posts in a content directory.
 //
 
 type PostIndex struct {
@@ -175,6 +185,8 @@ func (p *PostIndex) GetLatest() *Post {
 	return p.Posts[0]
 }
 
+// Returns all posts in a series, newest first, but excluding
+// the newest post if it's the newest one in all series.
 func (p *PostIndex) GetPriorPosts(seriesName string) []*Post {
 	latest := p.GetLatest()
 	series, ok := p.seriesMap[seriesName]
@@ -193,14 +205,25 @@ func (p *PostIndex) GetPriorPosts(seriesName string) []*Post {
 	}
 }
 
+// Returns the base (unnamed) series. For now, that's all
+// the random-access we need.
+func (p *PostIndex) GetBaseSeries() *Series {
+	return p.seriesMap[""]
+}
+
 // Pattern for a post directory: ${ISO_8601}-${NAME}
 var postRegexp = regexp.MustCompile(`(\d{4}-\d{2}-\d{2})-(.*)`)
+
+const (
+	ST_POST = iota
+	ST_SERIES
+)
 
 //
 // Reads posts within a posts/ directory including down one layer for
 // named series.
 //
-func readPosts(postsDir string, series *Series) ([]*Post, []*Series, error) {
+func readPosts(postsDir, seriesName string) ([]*Post, []*Series, error) {
 	d, err := os.Open(postsDir)
 	if err != nil {
 		return nil, nil, err
@@ -209,36 +232,68 @@ func readPosts(postsDir string, series *Series) ([]*Post, []*Series, error) {
 
 	infos, err := d.Readdir(-1)
 	if err != nil {
-		// NB: IO errors are ignored by Glob!
 		return nil, nil, err
 	}
 
-	posts := make([]*Post, 0)
-	allSeries := make([]*Series, 0)
-
+	// Load series metadata if available.
+	metadataPath := filepath.Join(postsDir, "metadata.json")
+	if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
+		metadataPath = ""
+	} else if err != nil {
+		log.Printf("Failed to stat %s: %v", metadataPath, err)
+		return nil, nil, err
+	}
+	series, err := NewSeries(seriesName, metadataPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Iterate through all directories within the current one.
+	posts := make([]*Post, 0)
+	allSeries := make([]*Series, 0)
 	for _, info := range infos {
 		// Skip files.
 		if !info.IsDir() {
 			continue
 		}
 
-		// Both posts and series can have metadata. Look for taht first.
-		metadataPath := filepath.Join(d.Name(), info.Name(), "metadata.json")
-		if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
-			metadataPath = ""
-		} else if err != nil {
-			log.Printf("Failed to stat %s: %v", metadataPath, err)
-			return nil, nil, err
-		}
-
 		contentPath := filepath.Join(d.Name(), info.Name(), "index.md")
+		var state int
 		switch _, err := os.Stat(contentPath); {
 		case err == nil:
 			// index.md exists, so this is a post directory.
+			state = ST_POST
+
+		case os.IsNotExist(err) && seriesName == "":
+			// No index.md, and we're not a layer deep. Presume it's a
+			// series.
+			state = ST_SERIES
+
+		case os.IsNotExist(err) && seriesName != "":
+			// No index.md, and we're already in a named series. Not
+			// valid.
+			return nil, nil, fmt.Errorf(
+				"Expected index.md at %s, but not found", contentPath)
+
+		default:
+			// OS failure. Bail.
+			return nil, nil, fmt.Errorf(
+				"Failed to stat index.md at %s: %w", contentPath, err)
+		}
+
+		switch state {
+		case ST_POST:
+			// Find the metadata if present.
+			postDir := filepath.Join(d.Name(), info.Name())
+			metadataPath := filepath.Join(postDir, "metadata.json")
+			if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
+				metadataPath = ""
+			} else if err != nil {
+				return nil, nil, fmt.Errorf(
+					"Failed to stat metadata at %s: %w", metadataPath, err)
+			}
+
+			// Parse the post
 			basename := filepath.Base(info.Name())
 			if m := postRegexp.FindStringSubmatch(basename); m != nil {
 				post, err := NewPost(m[1], m[2], contentPath, metadataPath, series)
@@ -247,38 +302,28 @@ func readPosts(postsDir string, series *Series) ([]*Post, []*Series, error) {
 				}
 				posts = append(posts, post)
 				series.Posts = append(series.Posts, post)
+			} else {
+				return nil, nil, fmt.Errorf(
+					"Post directory %s not in format ${ISO_8601}-${name}", postDir)
 			}
 
-		case os.IsNotExist(err) && series.Name == "":
+		case ST_SERIES:
 			// No index, but we're top-level. Treat this directory
 			// as a series of posts.
-			seriesName := info.Name()
-			newSeries, err := NewSeries(info.Name(), metadataPath)
+			baseName := info.Name()
+			dir := filepath.Join(d.Name(), baseName)
+			seriesPosts, seriesSlice, err := readPosts(dir, baseName)
 			if err != nil {
 				return nil, nil, err
 			}
-
-			seriesPosts, _, err := readPosts(
-				filepath.Join(d.Name(), seriesName), newSeries)
-			if err != nil {
-				return nil, nil, err
+			if len(seriesPosts) == 0 {
+				return nil, nil, fmt.Errorf("Series %s contained no posts", dir)
 			}
-			if len(posts) == 0 {
-				return nil, nil, fmt.Errorf(
-					"Series %s contained no posts", seriesName)
-			}
-			sortPosts(newSeries.Posts)
+			sortPosts(seriesSlice[0].Posts)
 			posts = append(posts, seriesPosts...)
-			allSeries = append(allSeries, newSeries)
-
-		case os.IsNotExist(err) && series.Name != "":
-			log.Printf("Expected index.md at %s, but not found", contentPath)
-			return nil, nil, err
-
-		default:
-			log.Printf("Failed to stat %s: %v", contentPath, err)
-			return nil, nil, err
+			allSeries = append(allSeries, seriesSlice[0])
 		}
+
 	}
 
 	if len(series.Posts) > 0 {
@@ -291,7 +336,7 @@ func readPosts(postsDir string, series *Series) ([]*Post, []*Series, error) {
 
 // Loads posts from a directory into a PostIndex.
 func NewPostIndex(contentDir string) (*PostIndex, error) {
-	posts, series, err := readPosts(filepath.Join(contentDir, "posts"), &Series{})
+	posts, series, err := readPosts(filepath.Join(contentDir, "posts"), "")
 	if err != nil {
 		return nil, err
 	}

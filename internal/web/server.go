@@ -144,6 +144,7 @@ func (s *Server) postURL(post *content.Post) string {
 
 func (s *Server) addHandlers() {
 	s.router.GET("/", s.getRoot)
+	s.router.GET("/rss.xml", s.getRSS)
 	s.router.GET("/posts/*filepath", s.getPost)
 	s.router.ServeFiles("/static/*filepath", http.Dir(s.staticDir))
 }

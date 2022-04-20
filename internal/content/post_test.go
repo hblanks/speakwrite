@@ -37,7 +37,7 @@ func createContent(t *testing.T, series []*Series) string {
 			}
 		}
 
-		for _, p := range s.posts {
+		for _, p := range s.Posts {
 			postPath := filepath.Join(seriesPath, p.Date.Format("2006-01-02-")+p.Name)
 			if err := os.Mkdir(postPath, 0755); err != nil {
 				t.Fatalf("createContent error: %v", err)
@@ -74,30 +74,36 @@ func deleteContent(contentRoot string) {
 	}
 }
 
-var baseSeries = &Series{
-	posts: []*Post{
+var baseSeries = &Series{}
+var seriesA = &Series{
+	Name: "A",
+	SeriesMetadata: SeriesMetadata{
+		Title: "A was a series",
+	},
+}
+var allSeries = []*Series{}
+
+func init() {
+	baseSeries.Posts = []*Post{
 		&Post{
 			Name:   "blah-blah-blah",
 			Title:  "Blah Blah Blah",
 			Date:   time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			Series: "",
+			Series: baseSeries,
 			Metadata: PostMetadata{
 				Deck: "blabbbb",
 				Tags: []string{"blah", "blab"},
 			},
 		},
-	},
-}
+	}
+	allSeries = append(allSeries, baseSeries)
 
-var seriesA = &Series{
-	Name:  "A",
-	Title: "A was a series",
-	posts: []*Post{
+	seriesA.Posts = []*Post{
 		&Post{
 			Name:   "first post",
 			Title:  "First Post",
 			Date:   time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
-			Series: "A",
+			Series: seriesA,
 			Metadata: PostMetadata{
 				Deck: "fooooo",
 				Tags: []string{"foo", "fie"},
@@ -107,29 +113,28 @@ var seriesA = &Series{
 			Name:   "second post",
 			Title:  "Second Post",
 			Date:   time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC),
-			Series: "A",
+			Series: seriesA,
 			Metadata: PostMetadata{
 				Deck: "waaaa",
 				Tags: []string{"foo", "fie"},
 			},
 		},
-	},
+	}
+	allSeries = append(allSeries, seriesA)
 }
-
-var bothSeries = []*Series{baseSeries, seriesA}
 
 func postsEqual(p1, p2 *Post) bool {
 	return p1.Name == p2.Name &&
 		p1.Title == p2.Title &&
 		p1.Date.Equal(p2.Date) &&
-		p1.Series == p2.Series &&
+		p1.Series.Name == p2.Series.Name &&
 		reflect.DeepEqual(p1.Metadata, p2.Metadata)
 
 }
 
 // (Regrettably) tests everything in one spot.
 func TestPostIndex(t *testing.T) {
-	contentRoot := createContent(t, bothSeries)
+	contentRoot := createContent(t, allSeries)
 	defer deleteContent(contentRoot)
 
 	pi, err := NewPostIndex(contentRoot)
@@ -138,7 +143,7 @@ func TestPostIndex(t *testing.T) {
 	}
 
 	t.Run("GetLatest", func(t *testing.T) {
-		expected := seriesA.posts[1]
+		expected := seriesA.Posts[1]
 		pi.GetLatest()
 		if actual := pi.GetLatest(); !postsEqual(expected, actual) {
 			t.Errorf("expected %s != actual %s (%#v != %#v)",
@@ -147,7 +152,7 @@ func TestPostIndex(t *testing.T) {
 	})
 
 	t.Run("GetPriorPosts: base series", func(t *testing.T) {
-		expected := baseSeries.posts[0]
+		expected := baseSeries.Posts[0]
 		priors := pi.GetPriorPosts("")
 		if len(priors) != 1 {
 			t.Fatalf("returned %d posts, not 1", len(priors))
@@ -159,7 +164,7 @@ func TestPostIndex(t *testing.T) {
 	})
 
 	t.Run("GetPriorPosts: series A", func(t *testing.T) {
-		expected := seriesA.posts[0]
+		expected := seriesA.Posts[0]
 		priors := pi.GetPriorPosts("A")
 		if len(priors) != 1 {
 			t.Fatalf("returned %d posts, not 1", len(priors))

@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/c9s/gomon v1.3.0
 	github.com/gomarkdown/markdown v0.0.0-20200105192015-0948ad373b2c
+	github.com/gorilla/feeds v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.3.0
 )
 

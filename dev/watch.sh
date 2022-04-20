@@ -22,4 +22,4 @@ WATCH_DIRS=$(find $DIR -maxdepth 1 -mindepth 1 -type d \
 make -C $DIR build/gomon
 $DIR/build/gomon -d -R -m='\.(html|json|go|md)$$' \
     $WATCH_DIRS $CONTENT_DIR $THEME_DIR -- \
-    sh -c "make && exec $DIR/build/speakwrite serve"
+    sh -c "make all && exec $DIR/build/speakwrite serve"

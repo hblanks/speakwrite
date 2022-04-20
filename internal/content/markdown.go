@@ -1,6 +1,8 @@
 package content
 
-// Reads and parses post content, notably Markdown.
+//
+// Reads and parses posts' index.md files.
+//
 
 import (
 	"bytes"
@@ -14,9 +16,9 @@ import (
 	"github.com/gomarkdown/markdown/parser"
 )
 
-// Tweak Markdown rendering so that:
+// Tweaks Markdown rendering so that:
 //	- the pandoc-style title block is not rendered
-//	- comments are not included
+//	- HTML comments are not excluded from output
 func nodeHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
 	switch v := node.(type) {
 	case *ast.Heading:
@@ -63,7 +65,8 @@ func parseMarkdown(path string) (ast.Node, error) {
 	return mdparser.Parse(md), nil
 }
 
-// Walks the AST and returns the title.
+// Walks the AST and returns the title. That's literally all
+// we're parsing the markdown for.
 func getTitle(doc ast.Node) string {
 	var title string
 	var inTitle bool
