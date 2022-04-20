@@ -12,17 +12,17 @@ import (
 )
 
 func main() {
-	outputPath := flag.String("output", "build/html", "Output path when rendering")
-
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()
 		fmt.Fprintf(out, "Usage: %s [serve|render]\n", os.Args[0])
 		fmt.Fprintf(out,
 			`Environment variables:
-	CONTENT_DIR		= Path to site content/ dir
-	LISTEN_ADDR		= Listen address (default: localhost:8080)
+	CONTENT_DIR		= Path to site content/ di
+	THEME_DIR		= Path to theme/ dir
 	PUBLIC_URL		= Public URL for the site (default: http://localhost:8080)
-	THEME_DIR		= Path to theme/ dir.
+
+	LISTEN_ADDR		= For "serve": listen address (default: localhost:8080)
+	OUTPUT_DIR      = For "render": where to write output
 `)
 	}
 	flag.Parse()
@@ -39,11 +39,6 @@ func main() {
 		publicURL = "http://localhost:8080"
 	}
 
-	listenAddr := os.Getenv("LISTEN_ADDR")
-	if listenAddr == "" {
-		listenAddr = "localhost:8080"
-	}
-
 	args := flag.Args()
 	if len(args) == 0 {
 		flag.Usage()
@@ -57,11 +52,20 @@ func main() {
 
 	switch args[0] {
 	case "render":
-		if err := render.WriteURLs(server, *outputPath); err != nil {
+		outputDir := os.Getenv("OUTPUT_DIR")
+		if outputDir == "" {
+			outputDir = "speakwrite-out"
+		}
+		if err := render.WriteURLs(server, outputDir); err != nil {
 			log.Fatalf("Write error: %v", err)
 		}
 
 	case "serve":
+		listenAddr := os.Getenv("LISTEN_ADDR")
+		if listenAddr == "" {
+			listenAddr = "localhost:8080"
+		}
+
 		log.Fatalf("Server listen error: %v",
 			http.ListenAndServe(listenAddr, server))
 

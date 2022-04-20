@@ -151,11 +151,12 @@ func (s *Server) addHandlers() {
 
 func (s *Server) GetURLs() ([]string, error) {
 	urls := make([]string, 0)
-	if u := s.PublicURL.String(); strings.HasSuffix(u, "/") {
-		urls = append(urls, u)
-	} else {
-		urls = append(urls, u+"/")
+
+	publicURL := s.PublicURL.String()
+	if !strings.HasSuffix(publicURL, "/") {
+		publicURL += "/"
 	}
+	urls = append(urls, publicURL)
 
 	// Find all posts and related files
 	for _, post := range s.Posts.Posts {
@@ -190,6 +191,9 @@ func (s *Server) GetURLs() ([]string, error) {
 		}
 	}
 
+	// Add RSS feed.
+	urls = append(urls, publicURL+"rss.xml")
+
 	// Find all static assets
 	err := filepath.Walk(s.staticDir,
 		func(path string, info os.FileInfo, err error) error {
@@ -206,7 +210,6 @@ func (s *Server) GetURLs() ([]string, error) {
 		return nil, err
 	}
 
-	// Find all static assets
 	return urls, nil
 }
 
