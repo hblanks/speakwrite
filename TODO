@@ -1,1 +1,2 @@
-- buttondown?
+- remove URL from metadata.json & only use PUBLIC_URL
+- require PUBLIC_URL for render
