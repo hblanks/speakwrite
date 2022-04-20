@@ -2,6 +2,7 @@ package feed
 
 import (
 	"bytes"
+	"net/url"
 	"testing"
 	"time"
 
@@ -14,7 +15,6 @@ func TestWriteRSS(t *testing.T) {
 		SeriesMetadata: content.SeriesMetadata{
 			Title:       "Here's a series",
 			Description: "It's a thing",
-			URL:         "http://speakwrite.blog/",
 			Author: content.SeriesAuthor{
 				Name:  "Pierce Inverarity",
 				Email: "pierce@waste.org",
@@ -43,8 +43,10 @@ func TestWriteRSS(t *testing.T) {
 		},
 	}
 
+	u, _ := url.Parse("https://example.com/")
+
 	buf := &bytes.Buffer{}
-	err := WriteRSS(&series.SeriesMetadata, posts, buf)
+	err := WriteRSS(u, &series.SeriesMetadata, posts, buf)
 	if err != nil {
 		t.Fatalf("WriteRSS() returned unexpected error: %v", err)
 	}

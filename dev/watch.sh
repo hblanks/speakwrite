@@ -19,7 +19,8 @@ WATCH_DIRS=$(find $DIR -maxdepth 1 -mindepth 1 -type d \
 # to do that.
 (sleep 0.5 ; touch $DIR/cmd/speakwrite/main.go) &
 
-make -C $DIR build/gomon
+cd $DIR
+make build/gomon
 $DIR/build/gomon -d -R -m='\.(html|json|go|md)$$' \
     $WATCH_DIRS $CONTENT_DIR $THEME_DIR -- \
     sh -c "make all && exec $DIR/build/speakwrite serve"

@@ -123,7 +123,6 @@ type SeriesMetadata struct {
 	Title string `json:"title"`
 	// Fields required for RSS but otherwise optional.
 	// Usually these will only be set for the base (unnamed) series.
-	URL         string       `json:"url"`
 	Description string       `json:"description"`
 	Author      SeriesAuthor `json:"author"`
 	Created     time.Time    `json:"created,string"`

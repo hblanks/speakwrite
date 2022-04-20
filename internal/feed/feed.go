@@ -1,7 +1,6 @@
 package feed
 
 import (
-	"fmt"
 	"io"
 	"net/url"
 	"path"
@@ -42,10 +41,10 @@ func join(u url.URL, relPath string) string {
 // Takes the base (unnamed) series and an ordered slice of posts.
 // Constructs an RSS feed and writes the most recent posts out
 // to it.
-func WriteRSS(md *content.SeriesMetadata, posts []*content.Post, w io.Writer) error {
+func WriteRSS(publicURL *url.URL, md *content.SeriesMetadata, posts []*content.Post, w io.Writer) error {
 	feed := &feeds.Feed{
 		Title:       md.Title,
-		Link:        &feeds.Link{Href: md.URL},
+		Link:        &feeds.Link{Href: publicURL.String()},
 		Description: md.Description,
 		Author: &feeds.Author{
 			Name:  md.Author.Name,
@@ -54,10 +53,6 @@ func WriteRSS(md *content.SeriesMetadata, posts []*content.Post, w io.Writer) er
 		Created: md.Created,
 	}
 
-	u, err := url.Parse(feed.Link.Href)
-	if err != nil {
-		return fmt.Errorf("Failed to parse feed link href: %w", err)
-	}
 	feed.Items = make([]*feeds.Item, 0, len(posts))
 	for i, p := range posts {
 		if i > maxItems {
@@ -65,7 +60,7 @@ func WriteRSS(md *content.SeriesMetadata, posts []*content.Post, w io.Writer) er
 		}
 		item := &feeds.Item{
 			Title:       toTitle(p.Series, p.Title),
-			Link:        &feeds.Link{Href: join(*u, p.RelativeURL())},
+			Link:        &feeds.Link{Href: join(*publicURL, p.RelativeURL())},
 			Description: toDescription(&p.Metadata),
 			Created:     p.Date,
 		}

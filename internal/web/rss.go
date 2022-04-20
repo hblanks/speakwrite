@@ -17,7 +17,7 @@ func (s *Server) getRSS(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 
-	err := feed.WriteRSS(&series.SeriesMetadata, s.Posts.Posts, w)
+	err := feed.WriteRSS(s.PublicURL, &series.SeriesMetadata, s.Posts.Posts, w)
 	if err != nil {
 		sendError(w, http.StatusInternalServerError)
 	}

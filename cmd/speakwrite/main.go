@@ -16,27 +16,24 @@ func main() {
 		out := flag.CommandLine.Output()
 		fmt.Fprintf(out, "Usage: %s [serve|render]\n", os.Args[0])
 		fmt.Fprintf(out,
-			`Environment variables:
-	CONTENT_DIR		= Path to site content/ di
+			`Required environment variables:
+	CONTENT_DIR		= Path to site content/ dir
 	THEME_DIR		= Path to theme/ dir
-	PUBLIC_URL		= Public URL for the site (default: http://localhost:8080)
+	PUBLIC_URL		= Public URL for the site
 
+Optional environment variables:
 	LISTEN_ADDR		= For "serve": listen address (default: localhost:8080)
-	OUTPUT_DIR      = For "render": where to write output
+	OUTPUT_DIR      = For "render": where to write output (default: speakwrite-out)
 `)
 	}
 	flag.Parse()
 
 	contentDir := os.Getenv("CONTENT_DIR")
 	themeDir := os.Getenv("THEME_DIR")
-	if contentDir == "" || themeDir == "" {
+	publicURL := os.Getenv("PUBLIC_URL")
+	if contentDir == "" || themeDir == "" || publicURL == "" {
 		flag.Usage()
 		os.Exit(1)
-	}
-
-	publicURL := os.Getenv("PUBLIC_URL")
-	if publicURL == "" {
-		publicURL = "http://localhost:8080"
 	}
 
 	args := flag.Args()
