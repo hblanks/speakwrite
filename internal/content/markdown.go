@@ -38,9 +38,10 @@ func nodeHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) 
 }
 
 var mdrenderer = html.NewRenderer(html.RendererOptions{
-	Title:          "A custom title",
-	Flags:          html.CommonFlags, // | html.FootnoteReturnLinks,
-	RenderNodeHook: html.RenderNodeFunc(nodeHook),
+	Title:                      "A custom title",
+	Flags:                      html.CommonFlags | html.FootnoteReturnLinks,
+	RenderNodeHook:             html.RenderNodeFunc(nodeHook),
+	FootnoteReturnLinkContents: "↰",
 })
 
 const IsoDateFormat = "2006-01-02"

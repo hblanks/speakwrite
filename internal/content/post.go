@@ -99,6 +99,13 @@ func (p *Post) RelativeURL() string {
 	}
 }
 
+func (p *Post) TitleWithSeries() string {
+	if p.Series.Name == "" { // Exclude the base series
+		return p.Title
+	}
+	return fmt.Sprintf("%s: %s", p.Series.Title, p.Title)
+}
+
 // Sorts a slice of posts by descending (date, name).
 func sortPosts(posts []*Post) {
 	sort.Slice(posts, func(i, j int) bool {

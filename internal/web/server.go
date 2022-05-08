@@ -95,7 +95,7 @@ func (s *Server) loadTemplates(templatesDir string) error {
 				return t.Format("2006-01-02")
 			},
 			"englishDate": func(t *time.Time) string {
-				return t.Format("January 2nd, 2006")
+				return t.Format("January 2, 2006")
 			},
 		})
 		if p == basePath {
